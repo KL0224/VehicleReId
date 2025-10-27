@@ -1,0 +1,19 @@
+# Environments
+.venv/
+
+# Environment variables
+.env
+streaming/.env
+
+# Folders
+Reference/
+models/
+datasets/AIC
+datasets/aic_2022
+detection/yolov5
+
+# IDE specific
+.idea/
+
+# Python specific
+__pycache__/
