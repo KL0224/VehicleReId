@@ -63,25 +63,29 @@ def stream_video(video_path, camera_id, producer, topic, frame_rate_limit):
             break
 
         # Encoder khung hình sang base64
-        _, buffer = cv2.imencode('.jpg', frame)
-        frame_base64 = base64.b64encode(buffer).decode('utf-8')
+        ok, buffer = cv2.imencode('.jpg', frame)
+        if not ok:
+            continue
+        frame_bytes = buffer.tobytes()
 
         # Tạo message JSON
-        message = {
+        metadata = {
             "camera_id": camera_id,
             "timestamp": datetime.now().isoformat(),
             "frame_id": frame_id,
-            "frame_data": frame_base64
+            "frame_timestamp": frame_id / frame_rate_limit,
         }
 
         try:
             # Gửi messgae tới kafka
             producer.produce(
                 topic=topic,
-                value=json.dumps(message).encode('utf-8'),
+                value=frame_bytes,
                 key=camera_id.encode('utf-8'),
+                headers=[('meta', json.dumps(metadata).encode('utf-8'))],
                 callback=delivery_report
             )
+            print(f"Đã gửi frame {frame_id}...")
         except BufferError:
             # Nếu buffer đầy, đợi và thử lại sau.
             print(f"Buffer của producer bị đầy cho camera {camera_id}. Đang đợi...")
@@ -90,8 +94,9 @@ def stream_video(video_path, camera_id, producer, topic, frame_rate_limit):
             try:
                 producer.produce(
                     topic=topic,
-                    value=json.dumps(message).encode('utf-8'),
+                    value=frame_bytes,
                     key=camera_id.encode('utf-8'),
+                    headers=[('meta', json.dumps(metadata).encode('utf-8'))],
                     callback=delivery_report
                 )
             except BufferError:

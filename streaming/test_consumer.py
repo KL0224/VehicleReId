@@ -26,7 +26,7 @@ def run_consumer():
         "auto.offset.reset": "earliest",
         'fetch.message.max.bytes': 10485760
     }
-    topic = config['kafka']['topic_test']['name']
+    topic = config['kafka']['topics']['raw_frames']['name']
 
     consumer = Consumer(conf)
     consumer.subscribe([topic])
@@ -43,13 +43,25 @@ def run_consumer():
                 else:
                     raise KafkaException(msg.error())
 
-            msg_value = json.loads(msg.value().decode("utf-8"))
-            camera_id = msg_value['camera_id']
-            frame_id = msg_value['frame_id']
-            print(f"Nhận được frame {frame_id} từ camera {camera_id}")
+            # 🧩 1. Đọc metadata từ headers
+            headers = msg.headers() or []
+            header_dict = {k: v for k, v in headers}
 
-            # Giải mã base64 và hiển thị ảnh
-            frame_bytes = base64.b64decode(msg_value['frame_data'])
+            # Lấy metadata từ header "meta"
+            meta_json = header_dict.get("meta")
+            if meta_json is None:
+                print("Không có metadata trong message!")
+                continue
+
+            metadata = json.loads(meta_json.decode("utf-8"))
+            camera_id = metadata.get("camera_id", "unknown")
+            frame_id = metadata.get("frame_id", -1)
+            timestamp = metadata.get("frame_timestamp", "N/A")
+
+            print(f"Nhận frame {frame_id} từ camera {camera_id} (timestamp: {timestamp})")
+
+            # 🧩 2. Giải mã ảnh từ binary bytes
+            frame_bytes = msg.value()
             frame_np = np.frombuffer(frame_bytes, dtype=np.uint8)
             frame = cv2.imdecode(frame_np, cv2.IMREAD_COLOR)
 
