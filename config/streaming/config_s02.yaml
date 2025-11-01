@@ -18,5 +18,5 @@ kafka:
 
 producer:
   video_source_dir: "datasets/aic_2022/videos/S02"
-  cameras_to_stream: ["c007"]
+  cameras_to_stream: ["c009"]
   frame_rate_limit: 10 # Every camera have 10 FPS / s (8FPS) --> FPS
