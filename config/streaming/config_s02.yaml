@@ -1,10 +1,10 @@
 kafka:
   topics:
     raw_frames:
-      name: 'raw_video_frames_s2'
+      name: "raw_video_frames_s2"
       partitions: 4
     processed_tracklets:
-      name: 'processed_tracklets'
+      name: "processed_tracklets"
       partitions: 4
     final_results:
       name: "final_results"
@@ -17,6 +17,6 @@ kafka:
     name: "test_c06"
 
 producer:
-  video_source_dir: 'datasets/aic_2022/videos/S02'
-  cameras_to_stream: ['c006']
+  video_source_dir: "datasets/aic_2022/videos/S02"
+  cameras_to_stream: ["c006"]
   frame_rate_limit: 10 # Every camera have 10 FPS / s (8FPS) --> FPS
