@@ -60,7 +60,7 @@ def run_consumer():
 
             print(f"Nhận frame {frame_id} từ camera {camera_id} (timestamp: {timestamp})")
 
-            # 🧩 2. Giải mã ảnh từ binary bytes
+            # Giải mã ảnh từ binary bytes
             frame_bytes = msg.value()
             frame_np = np.frombuffer(frame_bytes, dtype=np.uint8)
             frame = cv2.imdecode(frame_np, cv2.IMREAD_COLOR)

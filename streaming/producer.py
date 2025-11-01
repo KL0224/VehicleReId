@@ -62,8 +62,9 @@ def stream_video(video_path, camera_id, producer, topic, frame_rate_limit):
             # Kết thúc video, thoát vòng lặp
             break
 
-        # Encoder khung hình sang base64
-        ok, buffer = cv2.imencode('.jpg', frame)
+        frame = cv2.resize(frame, (1440,810))
+        # Encoder khung hình sang binary
+        ok, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
         if not ok:
             continue
         frame_bytes = buffer.tobytes()
@@ -85,7 +86,7 @@ def stream_video(video_path, camera_id, producer, topic, frame_rate_limit):
                 headers=[('meta', json.dumps(metadata).encode('utf-8'))],
                 callback=delivery_report
             )
-            print(f"Đã gửi frame {frame_id}...")
+            print(f"Đã gửi frame {frame_id}... với kích thước {len(frame_bytes)} bytes")
         except BufferError:
             # Nếu buffer đầy, đợi và thử lại sau.
             print(f"Buffer của producer bị đầy cho camera {camera_id}. Đang đợi...")
