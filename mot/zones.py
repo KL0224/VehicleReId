@@ -4,7 +4,6 @@ import os
 from PIL import Image
 import numpy as np
 
-
 class ZoneMatcher:
     def __init__(self, zone_folder, valid_zone_paths):
         zone_files = glob.glob(os.path.join(zone_folder, "zone*"))

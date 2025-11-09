@@ -1,19 +1,24 @@
 import os
 import json
 import cv2
-import base64
-import yaml
 import time
 import threading
 from confluent_kafka import Producer
 from datetime import datetime
 from dotenv import load_dotenv
+import yaml
 
 load_dotenv()
 
+
 def load_config(config_path='config/streaming/config_s02.yaml'):
-    with open(config_path, 'r') as f:
+    """Load cấu hình với validation"""
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Không tìm thấy file config: {config_path}")
+
+    with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
+
 
 def create_producer():
     """
@@ -25,97 +30,161 @@ def create_producer():
         'sasl.mechanisms': os.getenv('SASL_MECHANISM'),
         'sasl.username': os.getenv('SASL_USERNAME'),
         'sasl.password': os.getenv('SASL_PASSWORD'),
-        "linger.ms": 20, # Gửi message theo batch, đợi 20ms
-        "compression.type": 'snappy', # Nén message
-        "message.max.bytes": 10485760, # Cho phép gửi message lên 10MB
-        "request.timeout.ms": 60000, # Tăng thời gian phản hồi cho mỗi request
-        "retries": 5, # Tự động gửi lại message 5 lần nếu thất bại
-        "retry.backoff.ms": 1000, # Đợi 1 giây trước khi thử lại
-        "message.timeout.ms": 600000  # Tăng tổng thời gian tối đa cho một message lên 10 phút
+        "linger.ms": 20,
+        "compression.type": 'snappy',
+        "message.max.bytes": 10485760,
+        "request.timeout.ms": 60000,
+        "retries": 5,
+        "retry.backoff.ms": 1000,
+        "message.timeout.ms": 600000,
+        # ✅ Thêm: tối ưu batch processing
+        "batch.size": 1000000,  # 1MB batch
+        "queue.buffering.max.messages": 100000,
     }
-
     return Producer(conf)
 
+
 def delivery_report(err, msg):
-    """
-    Callback khi message được gửi hoặc thất bại!
-    """
+    """Callback khi message được gửi hoặc thất bại"""
     if err is not None:
-        print(f"Lỗi khi gửi message (key={msg.key().decode('utf-8')}): {err}")
+        camera_id = msg.key().decode('utf-8') if msg.key() else 'unknown'
+        print(f"❌ Lỗi gửi message (camera={camera_id}): {err}")
 
 
-def stream_video(video_path, camera_id, producer, topic, frame_rate_limit):
+def stream_video(video_path, camera_id, producer, topic, frame_rate_limit,
+                 start_time_offset=0.0):
     """
-    Đọc một file video, tách khung hình và gửi tới kafka!
-    Trả về số lượng khung hình đã gửi.
+    Đọc file video, tách khung hình và gửi tới Kafka.
+
+    Args:
+        video_path: Đường dẫn file video
+        camera_id: ID camera
+        producer: Kafka Producer instance
+        topic: Tên topic Kafka
+        frame_rate_limit: FPS mong muốn
+        start_time_offset: Offset thời gian bắt đầu (giây, dùng cho đồng bộ multi-cam)
+
+    Returns:
+        Số lượng khung hình đã gửi thành công
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"Lỗi không thể mở video từ file {video_path}")
-        return 0  # Trả về 0 nếu không mở được video
+        print(f"❌ Lỗi: Không thể mở video '{video_path}'")
+        return 0
 
-    print(f"Bắt đầu stream từ camera {camera_id}...")
+    # Lấy thông tin video
+    original_fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    print(f"📹 Camera {camera_id}: {total_frames} frames, FPS gốc={original_fps:.2f}")
+
     frame_id = 0
+    sent_count = 0
+    failed_count = 0
+
+    # ✅ Timestamp chuẩn hóa: epoch của video (1970-01-01 + offset)
+    # Để đồng bộ multi-camera, có thể thêm start_time_offset
+    video_start_epoch = datetime(1970, 1, 1).timestamp() + start_time_offset
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
-            # Kết thúc video, thoát vòng lặp
             break
 
-        frame = cv2.resize(frame, (1440,810))
-        # Encoder khung hình sang binary
+        # Resize frame
+        frame = cv2.resize(frame, (1440, 810))
+
+        # Encode frame thành JPEG binary
         ok, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
         if not ok:
+            print(f"⚠️  Camera {camera_id}: Không encode được frame {frame_id}")
+            frame_id += 1
             continue
+
         frame_bytes = buffer.tobytes()
 
-        # Tạo message JSON
+        # ✅ Tính timestamp theo chuẩn ISO8601 (frame_timestamp = thời điểm tương đối trong video)
+        frame_timestamp_seconds = frame_id / frame_rate_limit
+        absolute_timestamp = video_start_epoch + frame_timestamp_seconds
+
+        # Tạo metadata theo chuẩn schemas.py
         metadata = {
             "camera_id": camera_id,
-            "timestamp": datetime.now().isoformat(),
             "frame_id": frame_id,
-            "frame_timestamp": frame_id / frame_rate_limit,
+            "timestamp": datetime.utcfromtimestamp(absolute_timestamp).isoformat(timespec="milliseconds") + "Z",
+            "frame_timestamp": frame_timestamp_seconds,  # Thời gian tương đối (giây)
+            "width": 1440,
+            "height": 810,
         }
 
         try:
-            # Gửi messgae tới kafka
+            # Gửi message tới Kafka
             producer.produce(
                 topic=topic,
                 value=frame_bytes,
                 key=camera_id.encode('utf-8'),
-                headers=[('meta', json.dumps(metadata).encode('utf-8'))],
+                headers=[
+                    ('content-type', b'image/jpeg'),
+                    ('meta', json.dumps(metadata).encode('utf-8'))
+                ],
                 callback=delivery_report
             )
-            print(f"Đã gửi frame {frame_id}... với kích thước {len(frame_bytes)} bytes")
+            sent_count += 1
+
+            # ✅ Cải thiện: chỉ in log mỗi 100 frames
+            if frame_id % 100 == 0:
+                print(f"📤 Camera {camera_id}: đã gửi {sent_count}/{frame_id + 1} frames "
+                      f"({len(frame_bytes) // 1024}KB)")
+
         except BufferError:
-            # Nếu buffer đầy, đợi và thử lại sau.
-            print(f"Buffer của producer bị đầy cho camera {camera_id}. Đang đợi...")
-            producer.flush(5)  # Cố gắng gửi message trong 5 giây
-            # Thử lại một lần nữa
+            # Buffer đầy, đợi và thử lại
+            print(f"⚠️  Camera {camera_id}: Buffer đầy tại frame {frame_id}, đang flush...")
+            producer.flush(10)  # Đợi tối đa 10s
+
+            # Thử lại lần cuối
             try:
                 producer.produce(
                     topic=topic,
                     value=frame_bytes,
                     key=camera_id.encode('utf-8'),
-                    headers=[('meta', json.dumps(metadata).encode('utf-8'))],
+                    headers=[
+                        ('content-type', b'image/jpeg'),
+                        ('meta', json.dumps(metadata).encode('utf-8'))
+                    ],
                     callback=delivery_report
                 )
-            except BufferError:
-                print(f"Lỗi nghiêm trọng: Không thể gửi message cho camera {camera_id} ngay cả sau khi đợi, bỏ qua khung hình này")
-                # Tại đây, message này sẽ bị mất. Chúng ta dừng stream cho camera này.
-                break
+                sent_count += 1
+            except Exception as e:
+                print(f"❌ Camera {camera_id}: Không thể gửi frame {frame_id} sau khi retry: {e}")
+                failed_count += 1
+                # Tiếp tục thay vì break để không mất toàn bộ stream
 
-        producer.poll(0)  # Trigger callback
+        except Exception as e:
+            print(f"❌ Camera {camera_id}: Lỗi không xác định tại frame {frame_id}: {e}")
+            failed_count += 1
+
+        # Trigger callbacks
+        producer.poll(0)
 
         frame_id += 1
-        time.sleep(1 / frame_rate_limit)
+
+        # Đồng bộ FPS
+        time.sleep(1.0 / frame_rate_limit)
 
     cap.release()
-    print(f"Kết thúc stream cho camera {camera_id}...")
-    return frame_id  # Trả về tổng số khung hình đã xử lý
+    print(f"✅ Camera {camera_id}: Hoàn thành - Gửi {sent_count}/{frame_id} frames, "
+          f"thất bại {failed_count}")
 
-if __name__ == '__main__':
-    config = load_config()
+    return sent_count
+
+
+def main():
+    """Main function với xử lý lỗi đầy đủ"""
+    try:
+        config = load_config()
+    except Exception as e:
+        print(f"❌ Lỗi load config: {e}")
+        return
 
     producer_config = config['producer']
     kafka_config = config['kafka']
@@ -123,62 +192,102 @@ if __name__ == '__main__':
     producer = create_producer()
     raw_frames_topic = kafka_config['topics']['raw_frames']['name']
 
-    # 1. Ước tính tổng số message sẽ được gửi
+    # 1. Ước tính tổng số frames
     total_frames_to_send = 0
     video_paths = {}
-    print("Đang ước tính tổng số khung hình...")
+
+    print("=" * 60)
+    print("📊 ƯỚC TÍNH SỐ LƯỢNG FRAMES")
+    print("=" * 60)
+
     for cam_id in producer_config['cameras_to_stream']:
         video_path = os.path.join(producer_config['video_source_dir'], f'{cam_id}.avi')
+
         if not os.path.exists(video_path):
-            print(f"Không tìm thấy đường dẫn video {video_path}.")
+            print(f"⚠️  Không tìm thấy video: {video_path}")
             continue
 
         video_paths[cam_id] = video_path
         cap = cv2.VideoCapture(video_path)
+
         if cap.isOpened():
             frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            duration = frame_count / fps if fps > 0 else 0
+
             total_frames_to_send += frame_count
-            print(f"  - Video '{cam_id}.avi': {frame_count} khung hình.")
+            print(f"  📹 {cam_id}.avi: {frame_count} frames "
+                  f"(FPS={fps:.2f}, thời lượng={duration:.2f}s)")
             cap.release()
         else:
-            print(f"Lỗi không thể mở video {video_path} để đếm khung hình.")
+            print(f"❌ Không thể mở video: {video_path}")
 
-    print(f"==> Tổng số message dự kiến gửi: {total_frames_to_send}\n")
+    print(f"\n🎯 Tổng số frames dự kiến: {total_frames_to_send:,}")
+    print("=" * 60)
 
-    # 2. Chuẩn bị để đếm số message thực tế
+    if not video_paths:
+        print("❌ Không có video nào để stream!")
+        return
+
+    # 2. Khởi chạy multi-threading
     threads = []
-    sent_counts = {}  # Dictionary để lưu số lượng message đã gửi của mỗi luồng
+    sent_counts = {}
+
+    print(f"\n🚀 BẮT ĐẦU STREAMING TỪ {len(video_paths)} CAMERA(S)")
+    print("=" * 60)
 
     for cam_id, video_path in video_paths.items():
-        # Khởi tạo bộ đếm cho camera này
-        sent_counts[cam_id] = 0
+        # ✅ SỬA: Sử dụng default argument để capture biến đúng
+        def stream_wrapper(camera_id=cam_id, path=video_path):
+            count = stream_video(
+                path,
+                camera_id,
+                producer,
+                raw_frames_topic,
+                producer_config['frame_rate_limit']
+            )
+            sent_counts[camera_id] = count
 
-        # Sửa đổi target của thread để truyền vào sent_counts
-        thread = threading.Thread(
-            target=lambda: sent_counts.update({cam_id: stream_video(
-                video_path, cam_id, producer, raw_frames_topic, producer_config['frame_rate_limit']
-            )})
-        )
+        thread = threading.Thread(target=stream_wrapper, name=f"Thread-{cam_id}")
         threads.append(thread)
         thread.start()
 
+    # Đợi tất cả threads hoàn thành
     for thread in threads:
         thread.join()
 
-    print("\nĐang đợi gửi hết các message còn lại...")
-    producer.flush()  # Đảm bảo tất cả message được gửi đi
-    print("Tất cả các luồng stream đã hoàn tất.")
+    # 3. Flush tất cả messages còn lại
+    print("\n⏳ Đang flush messages còn lại trong buffer...")
+    remaining = producer.flush(30)  # Đợi tối đa 30s
 
-    # 3. So sánh kết quả
+    if remaining > 0:
+        print(f"⚠️  Còn {remaining} messages chưa được gửi!")
+    else:
+        print("✅ Đã gửi tất cả messages")
+
+    # 4. Tổng kết
     total_frames_sent = sum(sent_counts.values())
-    print("\n--- KẾT QUẢ SO SÁNH ---")
-    print(f"Tổng số message dự kiến: {total_frames_to_send}")
-    print(f"Tổng số message thực tế đã gửi: {total_frames_sent}")
+
+    print("\n" + "=" * 60)
+    print("📈 KẾT QUẢ STREAMING")
+    print("=" * 60)
+    print(f"Dự kiến:   {total_frames_to_send:,} frames")
+    print(f"Đã gửi:    {total_frames_sent:,} frames")
+    print(f"Tỷ lệ:     {total_frames_sent / total_frames_to_send * 100:.2f}%")
+
+    print("\n📊 Chi tiết từng camera:")
+    for cam_id in sorted(sent_counts.keys()):
+        count = sent_counts[cam_id]
+        print(f"  • {cam_id}: {count:,} frames")
 
     if total_frames_to_send == total_frames_sent:
-        print("==> THÀNH CÔNG: Đã gửi tất cả các khung hình!")
+        print("\n✅ THÀNH CÔNG: Đã stream tất cả frames!")
     else:
-        print(f"==> CẢNH BÁO: Bị thiếu {total_frames_to_send - total_frames_sent} message.")
-        print("Chi tiết mỗi luồng:")
-        for cam_id, count in sent_counts.items():
-            print(f"  - Camera {cam_id}: đã gửi {count} message.")
+        diff = total_frames_to_send - total_frames_sent
+        print(f"\n⚠️  CẢNH BÁO: Thiếu {diff:,} frames ({diff / total_frames_to_send * 100:.2f}%)")
+
+    print("=" * 60)
+
+
+if __name__ == '__main__':
+    main()
