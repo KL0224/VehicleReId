@@ -10,7 +10,7 @@ Reference/
 models/
 datasets/AIC
 datasets/aic_2022
-detection/yolov5
+detection/yolov5/yolov5x6.pt
 
 # IDE specific
 .idea/
