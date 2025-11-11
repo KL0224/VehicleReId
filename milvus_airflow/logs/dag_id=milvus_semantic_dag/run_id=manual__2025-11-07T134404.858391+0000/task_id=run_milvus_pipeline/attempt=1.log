@@ -1,0 +1,19 @@
+[2025-11-07T13:44:13.385+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2025-11-07T13:44:13.465+0000] {taskinstance.py:2612} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: milvus_semantic_dag.run_milvus_pipeline manual__2025-11-07T13:44:04.858391+00:00 [queued]>
+[2025-11-07T13:44:13.475+0000] {taskinstance.py:2612} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: milvus_semantic_dag.run_milvus_pipeline manual__2025-11-07T13:44:04.858391+00:00 [queued]>
+[2025-11-07T13:44:13.476+0000] {taskinstance.py:2865} INFO - Starting attempt 1 of 1
+[2025-11-07T13:44:13.491+0000] {taskinstance.py:2888} INFO - Executing <Task(PythonOperator): run_milvus_pipeline> on 2025-11-07 13:44:04.858391+00:00
+[2025-11-07T13:44:13.508+0000] {logging_mixin.py:190} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:70 DeprecationWarning: This process (pid=282) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-07T13:44:13.509+0000] {standard_task_runner.py:72} INFO - Started process 290 to run task
+[2025-11-07T13:44:13.507+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'milvus_semantic_dag', 'run_milvus_pipeline', 'manual__2025-11-07T13:44:04.858391+00:00', '--job-id', '3', '--raw', '--subdir', 'DAGS_FOLDER/milvus_semantic_dag.py', '--cfg-path', '/tmp/tmph_at23zr']
+[2025-11-07T13:44:13.510+0000] {standard_task_runner.py:105} INFO - Job 3: Subtask run_milvus_pipeline
+[2025-11-07T13:44:13.730+0000] {logging_mixin.py:190} WARNING - /home/***/.local/lib/python3.12/site-packages/***/settings.py:209 DeprecationWarning: The sql_alchemy_conn option in [core] has been moved to the sql_alchemy_conn option in [database] - the old setting has been used, but please update your config.
+[2025-11-07T13:44:13.943+0000] {task_command.py:467} INFO - Running <TaskInstance: milvus_semantic_dag.run_milvus_pipeline manual__2025-11-07T13:44:04.858391+00:00 [running]> on host a6f77716e6ee
+[2025-11-07T13:44:14.233+0000] {taskinstance.py:3131} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='milvus_semantic_dag' AIRFLOW_CTX_TASK_ID='run_milvus_pipeline' AIRFLOW_CTX_EXECUTION_DATE='2025-11-07T13:44:04.858391+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-11-07T13:44:04.858391+00:00'
+[2025-11-07T13:44:14.235+0000] {taskinstance.py:731} INFO - ::endgroup::
+[2025-11-07T13:44:14.265+0000] {logging_mixin.py:190} INFO - 🌍 Running in CLOUD mode
+[2025-11-07T13:44:15.714+0000] {taskinstance.py:340} INFO - ::group::Post task execution logs
+[2025-11-07T13:44:15.717+0000] {local_task_job_runner.py:245} INFO - ::endgroup::
+[2025-11-07T13:44:15.975+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 1
+[2025-11-07T13:44:16.059+0000] {taskinstance.py:3900} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-11-07T13:44:16.062+0000] {local_task_job_runner.py:245} INFO - ::endgroup::

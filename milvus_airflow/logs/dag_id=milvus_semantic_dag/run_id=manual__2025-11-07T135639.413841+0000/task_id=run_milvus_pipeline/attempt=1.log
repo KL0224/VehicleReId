@@ -1,0 +1,92 @@
+[2025-11-07T13:56:41.910+0000] {local_task_job_runner.py:123} INFO - ::group::Pre task execution logs
+[2025-11-07T13:56:41.986+0000] {taskinstance.py:2612} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: milvus_semantic_dag.run_milvus_pipeline manual__2025-11-07T13:56:39.413841+00:00 [queued]>
+[2025-11-07T13:56:41.994+0000] {taskinstance.py:2612} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: milvus_semantic_dag.run_milvus_pipeline manual__2025-11-07T13:56:39.413841+00:00 [queued]>
+[2025-11-07T13:56:41.994+0000] {taskinstance.py:2865} INFO - Starting attempt 1 of 1
+[2025-11-07T13:56:42.018+0000] {taskinstance.py:2888} INFO - Executing <Task(PythonOperator): run_milvus_pipeline> on 2025-11-07 13:56:39.413841+00:00
+[2025-11-07T13:56:42.043+0000] {logging_mixin.py:190} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:70 DeprecationWarning: This process (pid=210) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-07T13:56:42.046+0000] {standard_task_runner.py:72} INFO - Started process 212 to run task
+[2025-11-07T13:56:42.044+0000] {standard_task_runner.py:104} INFO - Running: ['***', 'tasks', 'run', 'milvus_semantic_dag', 'run_milvus_pipeline', 'manual__2025-11-07T13:56:39.413841+00:00', '--job-id', '5', '--raw', '--subdir', 'DAGS_FOLDER/milvus_semantic_dag.py', '--cfg-path', '/tmp/tmpralwls9o']
+[2025-11-07T13:56:42.047+0000] {standard_task_runner.py:105} INFO - Job 5: Subtask run_milvus_pipeline
+[2025-11-07T13:56:42.126+0000] {logging_mixin.py:190} WARNING - /home/***/.local/lib/python3.12/site-packages/***/settings.py:209 DeprecationWarning: The sql_alchemy_conn option in [core] has been moved to the sql_alchemy_conn option in [database] - the old setting has been used, but please update your config.
+[2025-11-07T13:56:42.369+0000] {task_command.py:467} INFO - Running <TaskInstance: milvus_semantic_dag.run_milvus_pipeline manual__2025-11-07T13:56:39.413841+00:00 [running]> on host 99ccbba1351b
+[2025-11-07T13:56:42.698+0000] {taskinstance.py:3131} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='milvus_semantic_dag' AIRFLOW_CTX_TASK_ID='run_milvus_pipeline' AIRFLOW_CTX_EXECUTION_DATE='2025-11-07T13:56:39.413841+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-11-07T13:56:39.413841+00:00'
+[2025-11-07T13:56:42.701+0000] {taskinstance.py:731} INFO - ::endgroup::
+[2025-11-07T13:56:43.646+0000] {logging_mixin.py:190} INFO - ✅ Loaded environment variables from /opt/***/.env
+[2025-11-07T13:56:43.647+0000] {logging_mixin.py:190} INFO - 🌍 Running in CLOUD mode
+[2025-11-07T13:56:43.647+0000] {logging_mixin.py:190} INFO - Connecting to Milvus Cloud at https://in03-6fed7b2904ca5bf.serverless.aws-eu-central-1.cloud.zilliz.com ...
+[2025-11-07T13:56:45.355+0000] {logging_mixin.py:190} INFO - ❌ ERROR OCCURRED:
+[2025-11-07T13:56:45.368+0000] {logging_mixin.py:190} WARNING - Traceback (most recent call last):
+[2025-11-07T13:56:45.369+0000] {logging_mixin.py:190} WARNING -   File "/opt/***/dags/milvus_semantic_dag.py", line 43, in run_milvus_pipeline
+    connections.connect(alias="default", uri=uri, token=token)
+[2025-11-07T13:56:45.370+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/orm/connections.py", line 472, in connect
+    connect_milvus(**kwargs, user=user, password=password, token=token, db_name=db_name)
+[2025-11-07T13:56:45.370+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/orm/connections.py", line 426, in connect_milvus
+    raise e from e
+[2025-11-07T13:56:45.370+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/orm/connections.py", line 418, in connect_milvus
+    gh._wait_for_channel_ready(timeout=timeout)
+[2025-11-07T13:56:45.371+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/client/grpc_handler.py", line 169, in _wait_for_channel_ready
+    raise e from e
+[2025-11-07T13:56:45.371+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/client/grpc_handler.py", line 160, in _wait_for_channel_ready
+    self._setup_identifier_interceptor(self._user, timeout=timeout)
+[2025-11-07T13:56:45.371+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/client/grpc_handler.py", line 271, in _setup_identifier_interceptor
+    self._identifier = self.__internal_register(user, host, timeout=timeout)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.372+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/decorators.py", line 268, in handler
+    raise e from e
+[2025-11-07T13:56:45.373+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/decorators.py", line 250, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.373+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/decorators.py", line 297, in handler
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.374+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/decorators.py", line 169, in handler
+    raise e from e
+[2025-11-07T13:56:45.374+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/decorators.py", line 165, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.374+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/decorators.py", line 335, in handler
+    raise e from e
+[2025-11-07T13:56:45.375+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/decorators.py", line 327, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.375+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/pymilvus/client/grpc_handler.py", line 2332, in __internal_register
+    response = self._stub.Connect(request=req)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.375+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_interceptor.py", line 276, in __call__
+    response, ignored_call = self._with_call(
+                             ^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.375+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_interceptor.py", line 331, in _with_call
+    return call.result(), call
+           ^^^^^^^^^^^^^
+[2025-11-07T13:56:45.376+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_channel.py", line 438, in result
+    raise self
+[2025-11-07T13:56:45.376+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_interceptor.py", line 314, in continuation
+    response, call = self._thunk(new_method).with_call(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.377+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_interceptor.py", line 342, in with_call
+    return self._with_call(
+           ^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.377+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_interceptor.py", line 331, in _with_call
+    return call.result(), call
+           ^^^^^^^^^^^^^
+[2025-11-07T13:56:45.377+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_channel.py", line 438, in result
+    raise self
+[2025-11-07T13:56:45.378+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_interceptor.py", line 314, in continuation
+    response, call = self._thunk(new_method).with_call(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.378+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_channel.py", line 1180, in with_call
+    return _end_unary_response_blocking(state, call, True, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.378+0000] {logging_mixin.py:190} WARNING -   File "/home/***/.local/lib/python3.12/site-packages/grpc/_channel.py", line 996, in _end_unary_response_blocking
+    raise _InactiveRpcError(state)  # pytype: disable=not-instantiable
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[2025-11-07T13:56:45.379+0000] {logging_mixin.py:190} WARNING - grpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:
+	status = StatusCode.UNAUTHENTICATED
+	details = "Invalid token: Your token is not valid. Please double-check your request parameters and ensure that you have provided a valid token."
+	debug_error_string = "UNKNOWN:Error received from peer  {grpc_message:"Invalid token: Your token is not valid. Please double-check your request parameters and ensure that you have provided a valid token.", grpc_status:16}"
+>
+[2025-11-07T13:56:45.382+0000] {taskinstance.py:340} INFO - ::group::Post task execution logs
+[2025-11-07T13:56:45.384+0000] {local_task_job_runner.py:245} INFO - ::endgroup::
+[2025-11-07T13:56:45.701+0000] {local_task_job_runner.py:266} INFO - Task exited with return code 1
+[2025-11-07T13:56:45.794+0000] {taskinstance.py:3900} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-11-07T13:56:45.797+0000] {local_task_job_runner.py:245} INFO - ::endgroup::
